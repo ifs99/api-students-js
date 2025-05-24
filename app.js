@@ -17,10 +17,16 @@ app.route('/students')
       res.json(rows);
     });
   })
-  .post((req, res) => {
+ .post((req, res) => {
     // POST request para crear un nuevo estudiante
-    const { firstname, lastname, gender, age } = req.body;
+    const firstname = req.body.firstname;
+    const lastname = req.body.lastname;
+    const gender = req.body.gender;
+    const age = req.body.age;
     
+    if (!firstname || !lastname || !gender) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
     db.run(
       `INSERT INTO students (firstname, lastname, gender, age) VALUES (?, ?, ?, ?)`,
       [firstname, lastname, gender, age],
@@ -53,9 +59,15 @@ app.route('/student/:id')
     });
   })
   .put((req, res) => {
-    // PUT request para actualizar un estudiante
     const id = req.params.id;
-    const { firstname, lastname, gender, age } = req.body;
+    const firstname = req.body.firstname;
+    const lastname = req.body.lastname;
+    const gender = req.body.gender;
+    const age = req.body.age;
+    
+    if (!firstname || !lastname || !gender) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
     
     db.run(
       `UPDATE students SET firstname = ?, lastname = ?, gender = ?, age = ? WHERE id = ?`,
