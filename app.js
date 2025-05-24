@@ -4,27 +4,51 @@ const db = require('./db');
 
 const app = express();
 
-// MIDDLEWARE FIX - Must come before routes
+// Enhanced middleware configuration
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json()); // Keep this for potential JSON requests
+app.use(bodyParser.json());
 
-// POST endpoint with error handling
+// GET all students
+app.get('/students', (req, res) => {
+    db.all("SELECT * FROM students", [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ 
+                error: err.message,
+                details: 'Failed to fetch students'
+            });
+        }
+        res.json({
+            count: rows.length,
+            students: rows
+        });
+    });
+});
+
+// POST new student (with fix for "No data received" error)
 app.post('/students', (req, res) => {
-    console.log('Received body:', req.body); // Debug log
-    
-    if (!req.body) {
-        return res.status(400).json({ error: 'No data received' });
+    console.log('Request headers:', req.headers); // Debug headers
+    console.log('Raw body:', req.body); // Debug raw body
+
+    // Check for body existence and content type
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return res.status(400).json({ 
+            error: 'No data received',
+            solution: 'Ensure you are sending with Content-Type: application/json or application/x-www-form-urlencoded',
+            example: {
+                json: '{"firstname":"John","lastname":"Doe","gender":"male","age":"25"}',
+                form: 'firstname=John&lastname=Doe&gender=male&age=25'
+            }
+        });
     }
 
-    const firstname = req.body.firstname;
-    const lastname = req.body.lastname;
-    const gender = req.body.gender;
-    const age = req.body.age;
-
+    const { firstname, lastname, gender, age } = req.body;
+    
     if (!firstname || !lastname || !gender) {
         return res.status(400).json({ 
             error: 'Missing required fields',
-            received: req.body  // Shows what was actually received
+            required: ['firstname', 'lastname', 'gender'],
+            optional: ['age'],
+            received: req.body
         });
     }
 
@@ -33,16 +57,25 @@ app.post('/students', (req, res) => {
         [firstname, lastname, gender, age],
         function(err) {
             if (err) {
-                return res.status(500).json({ error: err.message });
+                return res.status(500).json({ 
+                    error: err.message,
+                    details: 'Database insertion failed'
+                });
             }
-            res.json({
-                message: `Student created successfully`,
-                id: this.lastID
+            res.status(201).json({
+                message: 'Student created successfully',
+                id: this.lastID,
+                student: {
+                    id: this.lastID,
+                    firstname,
+                    lastname,
+                    gender,
+                    age
+                }
             });
         }
     );
 });
-
 // Ruta para manejar un estudiante específico
 app.route('/student/:id')
   .get((req, res) => {
